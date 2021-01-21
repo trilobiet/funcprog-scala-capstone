@@ -5,7 +5,16 @@ package observatory
   * @param lat Degrees of latitude, -90 ≤ lat ≤ 90
   * @param lon Degrees of longitude, -180 ≤ lon ≤ 180
   */
-case class Location(lat: Double, lon: Double)
+case class Location(lat: Double, lon: Double) {
+
+  def equals(otherLocation:Location): Boolean =
+    lat == otherLocation.lat && lon == otherLocation.lon
+
+  def isAntipode(otherLocation:Location): Boolean =
+    lat == -otherLocation.lat &&
+      lon == - (180 - Math.abs(otherLocation.lon))
+
+}
 
 /**
   * Introduced in Week 3. Represents a tiled web map tile.

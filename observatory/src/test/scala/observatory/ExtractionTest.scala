@@ -7,7 +7,7 @@ trait ExtractionTest extends MilestoneSuite {
 
   private val milestoneTest = namedMilestoneTest("data extraction", 1) _
 
-  private val csv2021 =
+  val csv2021 =
     """
     |010010,,01,01,35.9
     |010010,,01,02,34.7

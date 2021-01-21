@@ -69,6 +69,15 @@ object Extraction extends ExtractionInterface {
     */
   def locationYearlyAverageRecords(records: Iterable[(LocalDate, Location, Temperature)]): Iterable[(Location, Temperature)] = {
 
+    records.toSeq
+      .groupBy(_._2).par
+      .mapValues(lst => lst.map(t => t._3).sum / lst.size)
+      .seq
+  }
+  /*
+  // A verbose version of locationYearlyAverageRecords above
+  def locationYearlyAverageRecords(records: Iterable[(LocalDate, Location, Temperature)]): Iterable[(Location, Temperature)] = {
+
     // helper function to get average temperature
     def average(list: Seq[(LocalDate, Location, Temperature)]): Temperature =
       list.map(t => t._3).sum / list.size
@@ -82,6 +91,8 @@ object Extraction extends ExtractionInterface {
 
     q.seq
   }
+  */
+
 
   /**
     * @author acdhirr
