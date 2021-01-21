@@ -1,5 +1,7 @@
 package observatory
 
+import scala.math._
+
 /**
   * Introduced in Week 1. Represents a location on the globe.
   * @param lat Degrees of latitude, -90 ≤ lat ≤ 90
@@ -7,13 +9,28 @@ package observatory
   */
 case class Location(lat: Double, lon: Double) {
 
-  def equals(otherLocation:Location): Boolean =
+  def equals(otherLocation: RadianLocation): Boolean =
     lat == otherLocation.lat && lon == otherLocation.lon
 
-  def isAntipode(otherLocation:Location): Boolean =
+  def isAntipode(otherLocation: RadianLocation): Boolean =
     lat == -otherLocation.lat &&
-      lon == - (180 - Math.abs(otherLocation.lon))
+      lon == -(Pi - abs(otherLocation.lon))
 
+  def asRadians: RadianLocation =
+    RadianLocation(lat.toRadians, lon.toRadians)
+}
+
+case class RadianLocation(lat: Double, lon: Double) {
+
+  def equals(otherLocation: RadianLocation): Boolean =
+    lat == otherLocation.lat && lon == otherLocation.lon
+
+  def isAntipode(otherLocation: RadianLocation): Boolean =
+    lat == -otherLocation.lat &&
+      lon == -(Pi - abs(otherLocation.lon))
+
+  def asDegrees: Location =
+    Location(lat.toDegrees, lon.toDegrees)
 }
 
 /**

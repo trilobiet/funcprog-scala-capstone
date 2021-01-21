@@ -2,16 +2,14 @@ package observatory
 
 import com.sksamuel.scrimage.{Image, Pixel}
 
-import Math._
-import scala.collection.parallel.ParIterable
+import scala.collection.immutable
+import scala.math._
 import scala.collection.parallel.immutable.ParSeq
 
 /**
   * 2nd milestone: basic visualization
   */
 object Visualization extends VisualizationInterface {
-
-  var lineCounter = 0;
 
   /**
     * @author acdhirr
@@ -22,51 +20,54 @@ object Visualization extends VisualizationInterface {
   def predictTemperature(temperatures: Iterable[(Location, Temperature)], location: Location): Temperature = {
 
     // Inverse distance weighting https://en.wikipedia.org/wiki/Inverse_distance_weighting
-    val p = 2 // power parameter
+    val radLocation: RadianLocation = location.asRadians
 
-    val result2 =
-      temperatures.par.aggregate(
+    val result =
+      temperatures.par.map{
+        case(loc,temp) => (loc.asRadians, temp)
+      }
+      .aggregate(
         (0d, 0d)  // acc start value
       )(
-        (acc: (Double, Double), y: (Location, Temperature)) => {
-          val idw = inverseDistanceWeight(y._1,location,p) // weight for location y._1
+        (acc: (Double, Double), y: (RadianLocation, Temperature)) => {
+          val idw = inverseDistanceWeight(y._1,radLocation) // weight for location y._1
           (acc._1 + idw * y._2, acc._2 + idw) // add weighted temperature left, add weight right
         },
         (a: (Double, Double), b: (Double, Double)) => (a._1 + b._1, a._2 + b._2)  // combine accumulators
       )
 
-    val q = result2._1 / result2._2
-
-    // println(s"predictedTemperature for $location is $q")
-    if (location.lon == PI) {
-      lineCounter = lineCounter + 1
-      println(s"line $lineCounter ready")
-    }
-    q
-
-    /*
-    val weights =
-      temperatures.par.map { case(loc,_) => inverseDistanceWeight(loc,location,p) }
-    val weightSum = weights.par.sum
-
-    // zip temperatures with corresponding weights
-    val weightedTemps: Iterable[(Temperature, Temperature)] =
-      temperatures
-        .par.map { case(loc,temp) => temp }
-        .seq.zip(weights)
-      // same as temperatures.par.map(_._2).seq.zip(weights)
-
-    val predictedTemperature = weightedTemps
-      .par.map{ case(temp,weight) => weight * temp }
-      .seq.sum / weightSum
-
-    println(s"predictedTemperature for $location is $predictedTemperature")
-
-    predictedTemperature
-
-    */
-
+    result._1 / result._2
   }
+
+
+  /**
+    * An overloaded version of predict temperature that uses locations already converted to radians,
+    * so the conversions need not be repeated for each call of this method (the known temperature
+    * list me be very long).
+    *
+    * @author acdhirr
+    * @param temperatures Known temperatures: pairs containing a location (in radians) and
+    *                     the temperature at this location
+    * @param radLocation Location (in radians) where to predict the temperature
+    * @return The predicted temperature at `location`
+    */
+  def predictTemperature(temperatures: Iterable[(RadianLocation, Temperature)], radLocation: RadianLocation): Temperature = {
+
+    // Inverse distance weighting https://en.wikipedia.org/wiki/Inverse_distance_weighting
+    val result =
+      temperatures.par.aggregate(
+          (0d, 0d)  // acc start value
+        )(
+          (acc: (Double, Double), y: (RadianLocation, Temperature)) => {
+            val idw = inverseDistanceWeight(y._1,radLocation) // weight for location y._1
+            (acc._1 + idw * y._2, acc._2 + idw) // add weighted temperature left, add weight right
+          },
+          (a: (Double, Double), b: (Double, Double)) => (a._1 + b._1, a._2 + b._2)  // combine accumulators
+        )
+
+    result._1 / result._2
+  }
+
 
   /**
     * @author acdhirr
@@ -79,15 +80,18 @@ object Visualization extends VisualizationInterface {
     // Note that the given points are not sorted in a particular order.
     val temperatures = points.toMap
 
-    val lesserList = temperatures.keySet.filter(_ <= value)
-    val greaterList = temperatures.keySet.filter(_ >= value)
+    val lesserList = temperatures.keySet.filter(_ < value)
+    val greaterList = temperatures.keySet.filter(_ > value)
     val lower = if (lesserList.isEmpty) temperatures.keySet.min else lesserList.max
     val upper = if (greaterList.isEmpty) temperatures.keySet.max else greaterList.min
 
     val lowerColor = temperatures(lower)
     val upperColor = temperatures(upper)
 
-    val fraction = (value-lower)/(upper-lower)
+    val range = upper - lower
+    // when upper and lower coincide, i.e. at the upper and lower boundaries,
+    // make fraction 1 so take the boundary color
+    val fraction = if(range > 0) (value-lower)/(upper-lower) else 1
 
     val r = lowerColor.red    + fraction * (upperColor.red    - lowerColor.red)
     val g = lowerColor.green  + fraction * (upperColor.green  - lowerColor.green)
@@ -104,34 +108,31 @@ object Visualization extends VisualizationInterface {
     */
   def visualize(temperatures: Iterable[(Location, Temperature)], colors: Iterable[(Temperature, Color)]): Image = {
 
-    val gtemps: Iterable[(Location, Temperature)] = temperatures.map(t => (deg2rad(t._1),t._2))
+    val rTemps = temperatures.map {
+      case(loc,temp) => (loc.asRadians,temp)
+    }
 
-    val allTemperatures: ParSeq[(Location, Temperature)] = for {
-      lat <- (-90 to 89).par;
-      lon <- (-180 to 179).par;
-      location = Location(deg2rad(lat),deg2rad(lon))
-    } yield (location, predictTemperature(gtemps, location))
+    // For all pixels in the image find the corresponding coordinate
+    // and estimated temperature
+    val pixelTemperatures: ParSeq[((Int,Int), Temperature)] = for {
+      x <- (0 to 359).par;
+      y <- (0 to 179).par;
+      location = xy2loc(x,y)
+    } yield ((x,y), predictTemperature(rTemps, location.asRadians)) // uses overloaded predictTemperature
 
-    val xyColors: Iterable[((Int, Int), Color)] = allTemperatures.map{
-      case(loc,temp) => ( loc2xy(rad2deg(loc)), interpolateColor(colors,temp) )
+    val xyColors: Seq[((Int,Int), Color)] = pixelTemperatures.map{
+      case(loc,temp) => ( loc, interpolateColor(colors,temp) )
     }.seq
 
     val pixels: Array[Pixel] = new Array[Pixel](xyColors.size)
 
-    println(pixels.length)
-
     xyColors.par.foreach {
-      // our Color type ≠ com.sksamuel.scrimage.Color,
-      // so we cannot use our Color directly in the constructor!
+      // N.B. Our Color type ≠ com.sksamuel.scrimage.Color,
+      // So we cannot use our Color directly in the constructor!
       case((x,y),color: Color) => pixels(y * 360 + x) = Pixel(color.red,color.green,color.blue,255)
     }
 
-    //xyColors.foreach(println)
-
-    val img = Image(360,180,pixels)
-
-    img
-
+    Image(360,180,pixels)
   }
 
   /**
@@ -139,10 +140,9 @@ object Visualization extends VisualizationInterface {
     * @param location
     * @return
     */
-  def loc2xy(location: Location): (Int,Int) = {
+  def xy2loc(x:Int,y:Int): Location  = {
 
-    val width = 360
-    val height = width / 2
+    Location(90-y, x-180)
 
     /*
       (0,0) = {90,-180}
@@ -153,16 +153,8 @@ object Visualization extends VisualizationInterface {
       |                       |
       |                       |
       +-----------------------+
+                   (359,179) = {-89,179}
     */
-
-    // lat = y, lon = x
-    // {90,-180}  -> (0,0)
-    // {0,0}      -> (180,90)
-    // {-90,180}  -> (360,180)
-    // {-89,179}  -> (359,179)
-
-    ((round(location.lon+180) % 360).toInt,(round(90-location.lat) % 180).toInt)
-
   }
 
 
@@ -173,14 +165,12 @@ object Visualization extends VisualizationInterface {
     * @param power
     * @return Inverse Distance Weight for two locations
     */
-  def inverseDistanceWeight(loc1: Location, loc2: Location, power:Int): Double = {
+  def inverseDistanceWeight(loc1: RadianLocation, loc2: RadianLocation): Double = {
 
-    if (loc1.lat - loc2.lat > 0.25 && loc1.lon - loc2.lon > 0.25 )
-      0
-    else {
-      val dist = greatCircleDistanceRad(loc1, loc2)
-      1 / Math.pow(if (dist < 1) 1 else dist, power)
-    }
+    val POWER = 4
+
+    val dist = greatCircleDistance(loc1, loc2)
+    1 / pow(if (dist < 1) 1 else dist, POWER)
   }
 
 
@@ -189,66 +179,22 @@ object Visualization extends VisualizationInterface {
     * https://en.wikipedia.org/wiki/Great-circle_distance
     *
     * @author acdhirr
-    * @param loc1 in degrees
-    * @param loc2 in degrees
+    * @param loc1
+    * @param loc2
     * @return atcf distance between two locations
     */
-  def greatCircleDistance(loc1: Location, loc2: Location): Double = {
-
-    val r =  6371  // earth radius (average) in meters  6371.0088
-    val lon1 = deg2rad(loc1.lon) // These are quite costly
-    val lat1 = deg2rad(loc1.lat)
-    val lon2 = deg2rad(loc2.lon)
-    val lat2 = deg2rad(loc2.lat)
-
-    val deltaSigma =
-      if (loc1.equals(loc2))          0
-      else if (loc1.isAntipode(loc2)) PI
-      else                            acos( sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(abs(lon1-lon2)) )
-
-    r * deltaSigma
-  }
-
-  /**
-    * Calculate the spherical distance in km between 2 points on the globe
-    * https://en.wikipedia.org/wiki/Great-circle_distance
-    *
-    * @author acdhirr
-    * @param loc1 in radians
-    * @param loc2 in radians
-    * @return atcf distance between two locations
-    */
-  def greatCircleDistanceRad(loc1: Location, loc2: Location): Double = {
+  def greatCircleDistance(loc1: RadianLocation, loc2: RadianLocation): Double = {
 
     val r =  6371  // earth radius (average) in meters  6371.0088
 
     val deltaSigma =
       if (loc1.equals(loc2))          0
-      else if (loc1.isAntipode(loc2)) PI
-      else                            acos( sin(loc1.lat) * sin(loc2.lat) + cos(loc1.lat) * cos(loc2.lat) * cos(abs(loc1.lon-loc2.lon)) )
+      else if (loc1.isAntipode(loc2)) Pi
+      else
+        acos( sin(loc1.lat) * sin(loc2.lat) + cos(loc1.lat) * cos(loc2.lat) * cos(abs(loc1.lon-loc2.lon)) )
 
     r * deltaSigma
   }
-
-
-  /**
-    * Convert degrees to radians
-    *
-    * @author acdhirr
-    * @param degrees
-    * @return radians
-    */
-  def deg2rad(degrees: Double): Double =
-      degrees * PI / 180
-
-  def rad2deg(radians: Double): Double =
-      radians * 180 / PI
-
-  def deg2rad(location: Location): Location =
-    Location(deg2rad(location.lat),deg2rad(location.lon))
-
-  def rad2deg(location: Location): Location =
-    Location(rad2deg(location.lat),rad2deg(location.lon))
 
 }
 

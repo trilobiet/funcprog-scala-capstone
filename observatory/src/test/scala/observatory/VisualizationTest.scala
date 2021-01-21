@@ -9,10 +9,10 @@ trait VisualizationTest extends MilestoneSuite {
   private val milestoneTest = namedMilestoneTest("raw data display", 2) _
 
   val colorScale: Map[Temperature,Color] = Map(
-     60d	-> Color(255,255,255),
-     32d	-> Color(255,0,0),
-     12d	-> Color(255,255,0),
-      0d	-> Color(0,255,255),
+    60d	-> Color(255,255,255),
+    32d	-> Color(255,0,0),
+    12d	-> Color(255,255,0),
+    0d	-> Color(0,255,255),
     -15d	-> Color(0,0,255),
     -27d	-> Color(255,0,255),
     -50d	-> Color(33,0,107),
@@ -23,8 +23,8 @@ trait VisualizationTest extends MilestoneSuite {
   // Implement tests for the methods of the `Visualization` object
   @Test def `'greatCircleDistance' of antipodes must return ~20015 km`: Unit = {
 
-    val loc1 = Location(52.05249,4.21875)
-    val loc2 = Location(-52.05249,-175.78125)
+    val loc1 = Location(52.05249,4.21875).asRadians
+    val loc2 = Location(-52.05249,-175.78125).asRadians
     val tl = Visualization.greatCircleDistance(loc1,loc2)
     val expected = 6371 * Math.PI
     assertEquals(s"distance between antipodes should equal to about $expected", expected, tl, 1)
@@ -32,8 +32,8 @@ trait VisualizationTest extends MilestoneSuite {
 
   @Test def `'greatCircleDistance' of equal locations must return 0 meter`: Unit = {
 
-    val loc1 = Location(52.05249,4.21875)
-    val loc2 = Location(52.05249,4.21875)
+    val loc1 = Location(52.05249,4.21875).asRadians
+    val loc2 = Location(52.05249,4.21875).asRadians
     val tl = Visualization.greatCircleDistance(loc1,loc2)
     val expected = 0
     assertEquals(s"distance between equal locations should equal to $expected", expected, tl, 0)
@@ -42,8 +42,8 @@ trait VisualizationTest extends MilestoneSuite {
 
   @Test def `'greatCircleDistance' of Rotterdam-Kaapstad must return ~9660 km`: Unit = {
 
-    val loc1 = Location(52.05249,4.21875)
-    val loc2 = Location(-33.928992,18.417396)
+    val loc1 = Location(52.05249,4.21875).asRadians
+    val loc2 = Location(-33.928992,18.417396).asRadians
     val tl = Visualization.greatCircleDistance(loc1,loc2)
     val expected = 9660
     assertEquals(s"distance between Rotterdam and Kaapstad should equal to about $expected", expected, tl, 1)
@@ -67,7 +67,7 @@ trait VisualizationTest extends MilestoneSuite {
       Color(128,255,128),
       Color(255,128,0),
       Color(255,128,128),
-      Color(0,0,0),
+      Color(255,255,255),
       Color(0,136,255),
       Color(128,0,255),
       Color(149,0,184),
@@ -75,43 +75,78 @@ trait VisualizationTest extends MilestoneSuite {
       Color(0,0,0)
     )
 
-    println(calculatedColors)
+    // println(calculatedColors)
 
     assert(expectedColors.toSeq.equals(calculatedColors.toSeq),"interpolateColor does not return correct colors")
   }
 
-  // Test by Atul Kshirsagar
-  // https://www.coursera.org/learn/scala-capstone/discussions/weeks/2/threads/EqNpZMeITJyjaWTHiHycHA
-  @Test def `predicted Temperature at location z should be closer to known temperature at location x than to known temperature at location y, if z is closer (in distance) to x than y, and vice versa `: Unit = {
-    val loc = Location(45.0,-180.0)
-    val temperatures = List(
-      (Location(45.0, -179), 10.0),
-      (Location(45.0, -178.9), 20.0)
+  @Test def `1: predicted Temperature at location z should be closer to known temperature at location x than to known temperature at location y, if z is closer (in distance) to x than y, and vice versa `: Unit = {
+    val z = Location(88.0,-176.0)
+    val temperatures3 = List(
+      (Location(88.0, -177.0), 10.0),
+      (Location(88.0, -177.05), 20.0)
     )
-    val t = Visualization.predictTemperature(temperatures, loc)
+    val t = Visualization.predictTemperature(temperatures3, z)
     val td1 = Math.abs(t-10)
     val td2 = Math.abs(t-20)
-
+    println("predicted " + t)
     assert(td1 < td2, s"Temperature $t should be closer to closest point than farther point")
   }
 
+  @Test def `2: predicted Temperature at location z should be closer to known temperature at location x than to known temperature at location y, if z is closer (in distance) to x than y, and vice versa `: Unit = {
+    val z = Location(88.0,-178.0)
+    val temperatures3 = List(
+      (Location(88.0, -177.0), 10.0),
+      (Location(88.0, -177.05), 20.0)
+    )
+    val t = Visualization.predictTemperature(temperatures3, z)
+    val td1 = Math.abs(t-10)
+    val td2 = Math.abs(t-20)
+    println("predicted " + t)
+    assert(td1 > td2, s"Temperature $t should be closer to closest point than farther point")
+  }
 
+  @Test def `3: predicted Temperature at location z should be closer to known temperature at location x than to known temperature at location y, if z is closer (in distance) to x than y, and vice versa `: Unit = {
+    val z = Location(87.0,0.0)
+    val temperatures3 = List(
+      (Location(88.0, 0.0), 10.0),
+      (Location(88.05, 0.0), 20.0)
+    )
+    val t = Visualization.predictTemperature(temperatures3, z)
+    val td1 = Math.abs(t-10)
+    val td2 = Math.abs(t-20)
+    println("predicted " + t)
+    assert(td1 < td2, s"Temperature $t should be closer to closest point than farther point")
+  }
 
-  @Test def `loc2xy`: Unit = {
+  @Test def `4: predicted Temperature at location z should be closer to known temperature at location x than to known temperature at location y, if z is closer (in distance) to x than y, and vice versa `: Unit = {
+    val z = Location(89.0,0.0)
+    val temperatures3 = List(
+      (Location(88.0, 0.0), 10.0),
+      (Location(88.05, 0.0), 20.0)
+    )
+    val t = Visualization.predictTemperature(temperatures3, z)
+    val td1 = Math.abs(t-10)
+    val td2 = Math.abs(t-20)
+    println("predicted " + t)
+    assert(td1 > td2, s"Temperature $t should be closer to closest point than farther point")
+  }
+
+  @Test def `xy2loc`: Unit = {
 
     // lat = y, lon = x
     // {90,-180}  -> (0,0)
     // {0,0}      -> (180,90)
-    // {-90,180}  -> (360,180)
     // {-89,179}  -> (359,179)
 
     val locUpperLeft = Location(90,-180)
     val locCenter = Location(0,0)
     val locLowerRight = Location(-89,179)
-    println(Visualization.loc2xy(locUpperLeft))
-    println(Visualization.loc2xy(locCenter))
-    println(Visualization.loc2xy(locLowerRight))
 
+    val expected = List(locUpperLeft,locCenter,locLowerRight)
+    val actual = List(Visualization.xy2loc(0,0),Visualization.xy2loc(180,90),Visualization.xy2loc(359,179))
+
+    assert(expected.equals(actual),"xy2loc does not return correct image coordinates")
   }
 
 }
