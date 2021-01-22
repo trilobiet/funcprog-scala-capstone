@@ -89,7 +89,7 @@ trait VisualizationTest extends MilestoneSuite {
     val t = Visualization.predictTemperature(temperatures3, z)
     val td1 = Math.abs(t-10)
     val td2 = Math.abs(t-20)
-    println("predicted " + t)
+    // println("predicted " + t)
     assert(td1 < td2, s"Temperature $t should be closer to closest point than farther point")
   }
 
@@ -102,7 +102,7 @@ trait VisualizationTest extends MilestoneSuite {
     val t = Visualization.predictTemperature(temperatures3, z)
     val td1 = Math.abs(t-10)
     val td2 = Math.abs(t-20)
-    println("predicted " + t)
+    // println("predicted " + t)
     assert(td1 > td2, s"Temperature $t should be closer to closest point than farther point")
   }
 
@@ -115,7 +115,7 @@ trait VisualizationTest extends MilestoneSuite {
     val t = Visualization.predictTemperature(temperatures3, z)
     val td1 = Math.abs(t-10)
     val td2 = Math.abs(t-20)
-    println("predicted " + t)
+    // println("predicted " + t)
     assert(td1 < td2, s"Temperature $t should be closer to closest point than farther point")
   }
 
@@ -128,7 +128,7 @@ trait VisualizationTest extends MilestoneSuite {
     val t = Visualization.predictTemperature(temperatures3, z)
     val td1 = Math.abs(t-10)
     val td2 = Math.abs(t-20)
-    println("predicted " + t)
+    // println("predicted " + t)
     assert(td1 > td2, s"Temperature $t should be closer to closest point than farther point")
   }
 

@@ -14,12 +14,17 @@ case class Location(lat: Double, lon: Double) {
 
   def isAntipode(otherLocation: RadianLocation): Boolean =
     lat == -otherLocation.lat &&
-      lon == -(Pi - abs(otherLocation.lon))
+      lon == -(180 - abs(otherLocation.lon))
 
   def asRadians: RadianLocation =
     RadianLocation(lat.toRadians, lon.toRadians)
 }
 
+/**
+  * Location expressed in radians
+  * @param lat Radians of latitude, -½π ≤ lat ≤ ½π
+  * @param lon Radians of longitude, -π ≤ lon ≤ π
+  */
 case class RadianLocation(lat: Double, lon: Double) {
 
   def equals(otherLocation: RadianLocation): Boolean =
