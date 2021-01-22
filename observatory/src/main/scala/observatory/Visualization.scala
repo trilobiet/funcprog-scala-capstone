@@ -112,8 +112,8 @@ object Visualization extends VisualizationInterface {
       case(loc,temp) => (loc.asRadians,temp)
     }
 
-    // For all pixels in the image find the corresponding coordinate
-    // and estimated temperature
+    // For all pixels in the image calculate the corresponding coordinate
+    // and estimate temperature
     val pixelTemperatures: ParSeq[((Int,Int), Temperature)] = for {
       x <- (0 to 359).par;
       y <- (0 to 179).par;
