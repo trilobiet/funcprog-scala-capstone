@@ -9,12 +9,14 @@ import scala.math.pow
 object Interaction extends InteractionInterface {
 
   /**
+    * @author acdhirr
     * @param tile Tile coordinates
     * @return The latitude and longitude of the top-left corner of the tile, as per http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
     */
   def tileLocation(tile: Tile): Location = tile.toLocation
 
   /**
+    * @author acdhirr
     * @param temperatures Known temperatures
     * @param colors Color scale
     * @param tile Tile coordinates
@@ -24,7 +26,7 @@ object Interaction extends InteractionInterface {
 
     val rTemperatures = temperatures.map{ case(loc,temp) => (loc.asRadians,temp) }
 
-    // offsets
+    // offsets for this tile
     val x0 = tile.x*256
     val y0 = tile.y*256
 
@@ -45,19 +47,18 @@ object Interaction extends InteractionInterface {
 
   /**
     * Generates all the tiles for zoom levels 0 to 3 (included), for all the given years.
+    * The dataset contains pairs of (Year, Data) values, or, said otherwise, data associated with years.
+    * In your case, this data will be the result of Extraction.locationYearlyAverageRecords.
+    * The second parameter of the generateTiles method is a function that takes a year, the coordinates
+    * of the tile to generate, and the data associated with the year, and computes the tile and writes
+    * it on your filesystem.
+    *
+    * @author acdhirr
     * @param yearlyData Sequence of (year, data), where `data` is some data associated with
     *                   `year`. The type of `data` can be anything.
     * @param generateImage Function that generates an image given a year, a zoom level, the x and
     *                      y coordinates of the tile and the data to build the image from
     */
-  /*
-  This method generates all the tiles for a given dataset yearlyData, for zoom levels 0 to 3 (included).
-  The dataset contains pairs of (Year, Data) values, or, said otherwise, data associated with years.
-  In your case, this data will be the result of Extraction.locationYearlyAverageRecords.
-  The second parameter of the generateTiles method is a function that takes a year, the coordinates
-  of the tile to generate, and the data associated with the year, and computes the tile and writes
-  it on your filesystem.
-  */
   def generateTiles[Data](
     yearlyData: Iterable[(Year, Data)],
     generateImage: (Year, Tile, Data) => Unit

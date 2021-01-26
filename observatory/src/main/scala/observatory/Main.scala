@@ -20,7 +20,7 @@ object Main extends App {
   )
 
   // Choose which stage(s) you want to run
-  stage4()
+  stage3a()
 
   def stage2() = {
 
@@ -64,7 +64,7 @@ object Main extends App {
   }
 
 
-  def stage4() = {
+  def stage3a() = {
 
     implicit val writer = PngWriter.NoCompression
 
