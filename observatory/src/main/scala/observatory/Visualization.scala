@@ -66,7 +66,7 @@ object Visualization extends VisualizationInterface {
     // Note that the given points are not sorted in a particular order.
     val temperatures = points.toMap
 
-    val lesserList = temperatures.keySet.filter(_ < value)
+    val lesserList = temperatures.keySet.filter(_ <= value)
     val greaterList = temperatures.keySet.filter(_ > value)
     val lower = if (lesserList.isEmpty) temperatures.keySet.min else lesserList.max
     val upper = if (greaterList.isEmpty) temperatures.keySet.max else greaterList.min
@@ -105,19 +105,37 @@ object Visualization extends VisualizationInterface {
       location = xy2loc(x,y)
     } yield ((x,y), predictTemperature(rTemperatures, location.asRadians)) // uses overloaded predictTemperature
 
+    coloredTemperatureImage(pixelTemperatures.seq,colors,360)
+  }
+
+  /**
+    * @author acdhirr
+    * @param pixelTemperatures A list of (x,y) and temperature pairs
+    * @param colorScale Color scale
+    * @param width Width of image to create (height is implied by length of temperatures list)
+    * @param opacity Opacity of image
+    * @return An image where each pixel shows the temperature at its location
+    */
+  def coloredTemperatureImage(pixelTemperatures: Seq[((Int,Int), Temperature)],
+                              colorScale:Iterable[(Temperature, Color)],
+                              width: Int,
+                              opacity: Int = 255) = {
+
+    // for each pixel calculate the color associated with its temperature
     val xyColors: Seq[((Int,Int), Color)] = pixelTemperatures.map{
-      case(loc,temp) => ( loc, interpolateColor(colors,temp) )
+      case(loc,temp) => ( loc, interpolateColor(colorScale,temp) )
     }.seq
 
     val pixels: Array[Pixel] = new Array[Pixel](xyColors.size)
+    val height = xyColors.size / width;
 
     xyColors.par.foreach {
       // N.B. Our Color type ≠ com.sksamuel.scrimage.Color,
       // So we cannot use our Color directly in the constructor!
-      case((x,y),color: Color) => pixels(y * 360 + x) = Pixel(color.red,color.green,color.blue,255)
+      case((x,y),color: Color) => pixels(y * width + x) = Pixel(color.red,color.green,color.blue,opacity)
     }
 
-    Image(360,180,pixels)
+    Image(width,height,pixels)
   }
 
   /**
