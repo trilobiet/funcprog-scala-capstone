@@ -20,7 +20,7 @@ object Main extends App {
   )
 
   // Choose which stage(s) you want to run
-  stage3a()
+  stage4()
 
   def stage2() = {
 
@@ -94,6 +94,25 @@ object Main extends App {
     }
 
     Interaction.generateTiles(yearlyData,makeThatPic)
+  }
+
+  def stage4() = {
+
+    val temperaturess: Seq[Iterable[(Location, Temperature)]] = for {
+      year <- 1976 to 1977
+    } yield {
+      val measurements: Iterable[(LocalDate, Location, Temperature)] =
+        Extraction.locateTemperatures(1976, "/stations.csv", s"/$year.csv")
+      Extraction.locationYearlyAverageRecords(measurements)
+    }
+
+    val avgs = Manipulation.average(temperaturess)
+
+    for (
+      x <- -89 to 90;
+      y <- -180 to 179
+    ) println(avgs(GridLocation(x,y)))
+
   }
 
 }
