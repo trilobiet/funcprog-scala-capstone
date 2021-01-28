@@ -13,7 +13,7 @@ class CapstoneSuite
 
 trait MilestoneSuite {
 
-  val csv2021 =
+  val csv2021: String =
     """
       |010010,,01,01,35.9
       |010010,,01,02,34.7
@@ -50,7 +50,7 @@ trait MilestoneSuite {
       |blahblah,blahblah,10,01,35.4
       |""".stripMargin
 
-  val csvStations =
+  val csvStations: String =
     """
       |007005,,,
       |007026,,+00.000,+000.000

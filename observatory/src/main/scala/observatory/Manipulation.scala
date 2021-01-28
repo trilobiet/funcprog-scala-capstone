@@ -6,6 +6,7 @@ package observatory
 object Manipulation extends ManipulationInterface {
 
   /**
+    * @author acdhirr
     * @param temperatures Known temperatures
     * @return A function that, given a latitude in [-89, 90] and a longitude in [-180, 179],
     *         returns the predicted temperature at this location
@@ -13,23 +14,16 @@ object Manipulation extends ManipulationInterface {
   def makeGrid(temperatures: Iterable[(Location, Temperature)]): GridLocation => Temperature = {
 
     val rTemperatures = temperatures.map { case(loc,temp) => (loc.asRadians,temp) }
-
-    val gridTemperatures: Map[GridLocation, Temperature] = {
-      for (
-        x <- (-89 to 90).par;
-        y <- (-180 to 179).par;
-        loc = GridLocation(x, y)
-      ) yield
-        (loc -> Visualization.predictTemperature(rTemperatures, loc.asRadians))
-    }.seq.toMap
-
+    def f(loc:GridLocation):Temperature = Visualization.predictTemperature(rTemperatures, loc.asRadians)
+    val gridTemperatures = applyOnGrid(f)
     val grid = TemperatureGrid(gridTemperatures)
 
-    // return requested function
+    // return getter function
     grid.get
   }
 
   /**
+    * @author acdhirr
     * @param temperaturess Sequence of known temperatures over the years (each element of the collection
     *                      is a collection of pairs of location and temperature)
     * @return A function that, given a latitude and a longitude, returns the average temperature at this location
@@ -37,39 +31,25 @@ object Manipulation extends ManipulationInterface {
   def average(temperaturess: Iterable[Iterable[(Location, Temperature)]]): GridLocation => Temperature = {
 
     val years = temperaturess.size
-    val q: Iterable[GridLocation => Temperature] = temperaturess.map(yearData => makeGrid(yearData))
+    val gridGetters: Iterable[GridLocation => Temperature] = temperaturess.map(yearData => makeGrid(yearData))
 
-    // sum all temperatures for this grid location and divide by years
+    // a closure for gridGetters
     def f(loc:GridLocation):Temperature = {
-      val tSum = q.par.foldLeft(0.0)((t: Temperature, f: GridLocation => Temperature) => t + f(loc))
+      // sum all temperatures at this grid location through the years and divide by number of years
+      val tSum = gridGetters.par.foldLeft(0.0)((t: Temperature, f: GridLocation => Temperature) => t + f(loc))
       val tAvg = tSum / years
       tAvg
     }
 
-    val avgTemperatures: Map[GridLocation, Temperature] = gridLoop(f)
-
-    /*
-    val avgTemperatures: Map[GridLocation, Temperature] = {
-      for (
-        x <- -89 to 90;
-        y <- -180 to 179;
-        loc = GridLocation(x, y)
-      ) yield {
-        // sum all temperatures for this grid location and divide by years
-        val tSum = q.par.foldLeft(0.0)((t: Temperature, f: GridLocation => Temperature) => t + f(loc))
-        val tAvg = tSum/years
-        (loc -> tAvg)
-      }
-    }.toMap
-    */
-
+    val avgTemperatures: Map[GridLocation, Temperature] = applyOnGrid(f)
     val grid = TemperatureGrid(avgTemperatures)
 
-    // return requested function
+    // return getter function
     grid.get
   }
 
   /**
+    * @author acdhirr
     * @param temperatures Known temperatures
     * @param normals A grid containing the “normal” temperatures
     * @return A grid containing the deviations compared to the normal temperatures
@@ -77,18 +57,24 @@ object Manipulation extends ManipulationInterface {
   def deviation(temperatures: Iterable[(Location, Temperature)], normals: GridLocation => Temperature): GridLocation => Temperature = {
 
     val gridTemperatures = makeGrid(temperatures)
-    for (
-      x <- -89 to 90;
-      y <- -180 to 179;
-      loc = GridLocation(x, y)
-    ) yield {
+    def f(loc:GridLocation):Temperature = gridTemperatures(loc) - normals(loc)
+    val deviantTemperatures: Map[GridLocation, Temperature] = applyOnGrid(f)
+    val grid = TemperatureGrid(deviantTemperatures)
 
-    }
-
+    // return getter function
+    grid.get
   }
 
-
-  def gridLoop(f:GridLocation=>Temperature): Map[GridLocation, Temperature] = {
+  /**
+    * Apply a function for every coordinate in an Integer Grid
+    * (-89 ≤ lat ≤ 90 , -180 ≤ lon ≤ 179)
+    * (Abstracts away some boilerplate code)
+    *
+    * @author acdhirr
+    * @param function a function that maps a temperature to a grid location
+    * @return a Map mapping a temperature to each grid location
+    */
+  private def applyOnGrid(function:GridLocation=>Temperature): Map[GridLocation, Temperature] = {
 
     (
       for (
@@ -96,11 +82,10 @@ object Manipulation extends ManipulationInterface {
         y <- (-180 to 179).par;
         loc = GridLocation(x, y)
       ) yield {
-        (loc -> f(loc))
+        (loc -> function(loc))
       }
     ).seq.toMap
   }
-
 
 }
 
