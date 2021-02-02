@@ -20,7 +20,7 @@ object Main extends App {
   )
 
   // Choose which stage(s) you want to run
-  stage4()
+  stage5()
 
   def stage2() = {
 
@@ -58,13 +58,15 @@ object Main extends App {
       , (20.0, Color(0, 0, 255))
     )
 
-    val img = Interaction.tile(locationsTemperatures, colorMap, Tile(0, 0, 2))
+    val img = Interaction.tile(locationsTemperatures, colorMap, Tile(0, 0, 0))
     implicit val writer = PngWriter.NoCompression
     img.output(new java.io.File(s"target/test.png"))
   }
 
 
   def stage3a() = {
+
+    // Takes a long, long time...
 
     implicit val writer = PngWriter.NoCompression
 
@@ -108,12 +110,60 @@ object Main extends App {
 
     val avgs = Manipulation.average(temperaturess)
 
+    /*
     for (
-      x <- -89 to 90;
-      y <- -180 to 179
-    ) println(avgs(GridLocation(x,y)))
+      lat <- -89 to 90;
+      lon <- -180 to 179
+    ) println(avgs(GridLocation(lat,lon)))
+    */
+
+    avgs
+  }
+
+  def stage5() = {
+
+    implicit val writer = PngWriter.NoCompression
+
+    val normals: (GridLocation => Temperature) = stage4()
+
+    val year = 2015
+
+    val measurements: Iterable[(LocalDate, Location, Temperature)] =
+      Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
+
+    val averages2015: Iterable[(Location, Temperature)] = Extraction.locationYearlyAverageRecords(measurements)
+
+    println("averages: " + averages2015.toMap.keySet.size)
+
+    val deviation: GridLocation => Temperature = Manipulation.deviation(averages2015,normals)
+
+    val colorScale: Map[Temperature,Color] = Map(
+      7d	-> Color(0,0,0),
+      4d	-> Color(255,0,0),
+      2d	-> Color(255,255,0),
+      0d	-> Color(255,255,255),
+      -2d	-> Color(0,255,255),
+      -7d	-> Color(0,0,255)
+    )
+
+    val tile1 = Tile(0,0,0)
+    val img1: Image = Visualization2.visualizeGrid(deviation,colorScale,tile1)
+    img1.output(new java.io.File("target/s1.png"))
+
+    val tile2 = Tile(1,1,2)
+    val img2: Image = Visualization2.visualizeGrid(deviation,colorScale,tile2)
+    img2.output(new java.io.File("target/s2.png"))
+
+    val tile3 = Tile(3,3,2)
+    val img3: Image = Visualization2.visualizeGrid(deviation,colorScale,tile3)
+    img3.output(new java.io.File("target/s3.png"))
+
+    val tile4 = Tile(0,0,2)
+    val img4: Image = Visualization2.visualizeGrid(deviation,colorScale,tile4)
+    img4.output(new java.io.File("target/s4.png"))
 
   }
+
 
 }
 

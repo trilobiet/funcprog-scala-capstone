@@ -27,20 +27,21 @@ object Interaction extends InteractionInterface {
     val rTemperatures = temperatures.map{ case(loc,temp) => (loc.asRadians,temp) }
 
     // offsets for this tile
-    val x0 = tile.x*256
-    val y0 = tile.y*256
+    val (x0,y0) = tile.offSet
 
-    val calculatedTemperatures: Seq[((Int,Int), Temperature)] = for (
-      y <- (y0 to y0 + 255);
-      x <- (x0 to x0 + 255);
-      // Hint: you will have to compute the corresponding latitude and longitude of each pixel within a tile.
-      // A simple way to achieve that is to rely on the fact that each pixel in a tile can be thought of
-      // as a sub tile at a higher zoom level (256 = 2⁸).
-      location = Tile(x,y,tile.zoom+8).toLocation
-    ) yield {
-      val pt = Visualization.predictTemperature(rTemperatures,location.asRadians)
-      ( (x-x0,y-y0), pt ) // remove offsets for 256x256 pic
-    }
+    val calculatedTemperatures: Seq[((Int,Int), Temperature)] = (
+      for {
+        x <- (y0 to y0 + 255).par;
+        y <- (x0 to x0 + 255).par;
+        // Hint: you will have to compute the corresponding latitude and longitude of each pixel within a tile.
+        // A simple way to achieve that is to rely on the fact that each pixel in a tile can be thought of
+        // as a sub tile at a higher zoom level (256 = 2⁸).
+        location = Tile(x, y, tile.zoom + 8).toLocation
+      } yield {
+        val pt = Visualization.predictTemperature(rTemperatures,location.asRadians)
+        ( (x-x0,y-y0), pt ) // remove offsets for 256x256 pic
+      }
+    ).seq
 
     Visualization.coloredTemperatureImage(calculatedTemperatures,colors,256, 127)
   }

@@ -122,9 +122,14 @@ object Visualization extends VisualizationInterface {
                               opacity: Int = 255) = {
 
     // for each pixel calculate the color associated with its temperature
-    val xyColors: Seq[((Int,Int), Color)] = pixelTemperatures.map{
+    /* val xyColors: Seq[((Int,Int), Color)] = pixelTemperatures.map{
       case(loc,temp) => ( loc, interpolateColor(colorScale,temp) )
-    }.seq
+    }.seq */
+
+    // shorter
+    val xyColors = pixelTemperatures
+      .toMap.par
+      .mapValues(t => interpolateColor(colorScale,t))
 
     val pixels: Array[Pixel] = new Array[Pixel](xyColors.size)
     val height = xyColors.size / width;

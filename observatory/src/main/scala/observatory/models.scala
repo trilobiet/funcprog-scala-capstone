@@ -13,8 +13,7 @@ case class Location(lat: Double, lon: Double) {
     lat == otherLocation.lat && lon == otherLocation.lon
 
   def isAntipode(otherLocation: RadianLocation): Boolean =
-    lat == -otherLocation.lat &&
-      lon == -(180 - abs(otherLocation.lon))
+    lat == -otherLocation.lat && lon == -(180 - abs(otherLocation.lon))
 
   def asRadians: RadianLocation =
     RadianLocation(lat.toRadians, lon.toRadians)
@@ -32,8 +31,7 @@ case class RadianLocation(lat: Double, lon: Double) {
     lat == otherLocation.lat && lon == otherLocation.lon
 
   def isAntipode(otherLocation: RadianLocation): Boolean =
-    lat == -otherLocation.lat &&
-      lon == -(Pi - abs(otherLocation.lon))
+    lat == -otherLocation.lat && lon == -(Pi - abs(otherLocation.lon))
 
   def asDegrees: Location =
     Location(lat.toDegrees, lon.toDegrees)
@@ -55,6 +53,15 @@ case class Tile(x: Int, y: Int, zoom: Int) {
     toDegrees(atan(sinh(Pi * (1.0 - 2.0 * y.toDouble / (1 << zoom))))),
     x.toDouble / (1 << zoom) * 360.0 - 180.0
   )
+
+  def toGridLocation = {
+    val loc = toLocation
+    GridLocation( loc.lat.toInt, loc.lon.toInt )
+  }
+
+  // offset of tile in pixels from top left corner
+  def offSet = (x*256,y*256)
+
 }
 /**
   * Introduced in Week 4. Represents a point on a grid composed of
@@ -63,6 +70,10 @@ case class Tile(x: Int, y: Int, zoom: Int) {
   * @param lon Line of longitude in degrees, -180 ≤ lon ≤ 179
   */
 case class GridLocation(lat: Int, lon: Int) {
+
+  def wrap = GridLocation(
+      (lat + 90) % 180 - 90, (lon + 180) % 360 - 180
+    )
 
   def asRadians: RadianLocation =
     RadianLocation(lat.toRadians, lon.toRadians)

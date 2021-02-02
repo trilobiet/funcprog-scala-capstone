@@ -78,9 +78,9 @@ object Manipulation extends ManipulationInterface {
 
     (
       for (
-        x <- (-89 to 90).par;
-        y <- (-180 to 179).par;
-        loc = GridLocation(x, y)
+        lon <- (-180 to 179).par;
+        lat <- (-89 to 90).par;
+        loc = GridLocation(lat, lon)
       ) yield {
         (loc -> function(loc))
       }
