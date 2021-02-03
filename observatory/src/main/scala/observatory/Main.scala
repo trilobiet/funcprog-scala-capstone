@@ -2,9 +2,11 @@ package observatory
 
 import com.sksamuel.scrimage.Image
 import com.sksamuel.scrimage.nio.PngWriter
+
 import java.time.LocalDate
 import java.nio.file.Files
 import java.nio.file.Paths
+import scala.math.pow
 
 object Main extends App {
 
@@ -20,7 +22,7 @@ object Main extends App {
   )
 
   // Choose which stage(s) you want to run
-  stage5a()
+  stage3a()
 
   def stage2() = {
 
@@ -66,19 +68,20 @@ object Main extends App {
 
   def stage3a() = {
 
+    // Creating temperature tiles
     // Takes a long, long time...
 
     implicit val writer = PngWriter.NoCompression
 
     val yearlyData: Seq[(Year, Iterable[(Location, Temperature)])] = for (
-      year <- 2014 to 2015;
+      year <- 2012 to 2013;
       measurements = Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv");
       averages = Extraction.locationYearlyAverageRecords(measurements)
     ) yield {
       (year, averages)
     }
 
-    yearlyData.foreach( d => println(d._1,d._2.size) )
+    yearlyData.foreach( d => println((d._1,d._2.size)) )
 
     def makeThatPic(year: Year, tile: Tile, data: Iterable[(Location, Temperature)]) = {
 
@@ -179,6 +182,51 @@ object Main extends App {
     val loc4 = Location(2.3,-4.1)
     println(Visualization2.interpolationSquare(loc4))
 
+  }
+
+
+  def stage5b() = {
+
+    // Creating deviation tiles
+    // Much faster then temperatures (stage3a)
+
+    val years = 2012 to 2013
+
+    implicit val writer = PngWriter.NoCompression
+
+    val colorScale: Map[Temperature,Color] = Map(
+      7d	-> Color(0,0,0),
+      4d	-> Color(255,0,0),
+      2d	-> Color(255,255,0),
+      0d	-> Color(255,255,255),
+      -2d	-> Color(0,255,255),
+      -7d	-> Color(0,0,255)
+    )
+
+    val normals: (GridLocation => Temperature) = stage4()
+
+    val deviations = (for {
+      year <- years
+      measurements =  Extraction.locateTemperatures(year, "/stations.csv", s"/$year.csv")
+      averages = Extraction.locationYearlyAverageRecords(measurements)
+    } yield {
+      year -> Manipulation.deviation(averages, normals)
+    }).toMap
+
+    for (
+      year <- years;
+      zoom <- 0 to 3;
+      tiles = pow(2,zoom).toInt-1;
+      x <- 0 to tiles;
+      y <- 0 to tiles;
+      tile = Tile(x,y,zoom);
+      img = Visualization2.visualizeGrid(deviations(year),colorScale,tile);
+      pathname = s"target/deviations/$year/${tile.zoom}/${tile.x}-${tile.y}.png"
+    ) yield {
+      println(s"pathname: $pathname")
+      Files.createDirectories(Paths.get(pathname).getParent)
+      img.output(new java.io.File(pathname))
+    }
   }
 
 }

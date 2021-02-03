@@ -5,11 +5,38 @@ package observatory
   */
 object Interaction2 extends Interaction2Interface {
 
+  private val availableYears = 2014 to 2015
+
+  private val temperatureColors = Seq(
+    60d   -> Color(255,255,255),
+    32d   -> Color(255,0,0),
+    12d   -> Color(255,255,0),
+    0d    -> Color(0,255,255),
+    -15d  -> Color(0,0,255),
+    -27d  -> Color(255,0,255),
+    -50d  -> Color(33,0,107),
+    -60d  -> Color(0,0,0)
+  )
+
+  private val deviationColors = Seq(
+    7d  -> Color(0, 0, 0),
+    4d  -> Color(255, 0, 0),
+    2d  -> Color(255, 255, 0),
+    0d  -> Color(255, 255, 255),
+    -2d -> Color(0, 255, 255),
+    -7d -> Color(0, 0, 255)
+  )
+
   /**
     * @return The available layers of the application
     */
   def availableLayers: Seq[Layer] = {
-    ???
+    val yearsRange = Range(availableYears.min,availableYears.max)
+
+    Seq(
+      Layer(LayerName.Temperatures,temperatureColors,yearsRange),
+      Layer(LayerName.Deviations,deviationColors,yearsRange)
+    )
   }
 
   /**
@@ -17,7 +44,7 @@ object Interaction2 extends Interaction2Interface {
     * @return A signal containing the year bounds corresponding to the selected layer
     */
   def yearBounds(selectedLayer: Signal[Layer]): Signal[Range] = {
-    ???
+    Signal(selectedLayer().bounds)
   }
 
   /**
@@ -29,7 +56,10 @@ object Interaction2 extends Interaction2Interface {
     *         in the `selectedLayer` bounds.
     */
   def yearSelection(selectedLayer: Signal[Layer], sliderValue: Signal[Year]): Signal[Year] = {
-    ???
+
+    val bounds = yearBounds(selectedLayer)
+    val year = sliderValue().max(bounds().min).min(bounds().max)
+    Signal(year)
   }
 
   /**
@@ -38,7 +68,9 @@ object Interaction2 extends Interaction2Interface {
     * @return The URL pattern to retrieve tiles
     */
   def layerUrlPattern(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String] = {
-    ???
+
+    val layerName = Signal(selectedLayer().layerName.id)
+    Signal(s"target/${layerName()}/${selectedYear()}/{z}/{x}-{y}.png")
   }
 
   /**
@@ -47,7 +79,8 @@ object Interaction2 extends Interaction2Interface {
     * @return The caption to show
     */
   def caption(selectedLayer: Signal[Layer], selectedYear: Signal[Year]): Signal[String] = {
-    ???
+    val dirName = Signal(selectedLayer().layerName.id.capitalize)
+    Signal(s"${dirName()} (${selectedYear()})")
   }
 
 }
