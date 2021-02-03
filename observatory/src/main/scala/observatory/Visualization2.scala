@@ -1,10 +1,7 @@
 package observatory
 
-import com.sksamuel.scrimage.{Image, Pixel}
-
-import scala.collection.immutable
-import scala.math.pow
-import Visualization._
+import com.sksamuel.scrimage.Image
+import observatory.Visualization._
 
 /**
   * 5th milestone: value-added information visualization
@@ -12,6 +9,7 @@ import Visualization._
 object Visualization2 extends Visualization2Interface {
 
   /**
+    * @author acdhirr
     * @param point (x, y) coordinates of a point in the grid cell
     *        (CellPoint is a fraction 0 ≤ x ≤ 1 and 0 ≤ y ≤ 1)
     * @param d00 Top-left value
@@ -29,7 +27,7 @@ object Visualization2 extends Visualization2Interface {
     d11: Temperature
   ): Temperature = {
 
-    // prepare xy for readability and some speed up
+    // prepare xy for readability and some speed gain
     val x = point.x
     val y = point.y
     val xy = x * y
@@ -40,6 +38,7 @@ object Visualization2 extends Visualization2Interface {
   }
 
   /**
+    * @author acdhirr
     * @param grid Grid to visualize
     * @param colors Color scale to use
     * @param tile Tile coordinates to visualize
@@ -51,18 +50,7 @@ object Visualization2 extends Visualization2Interface {
     tile: Tile
   ): Image = {
 
-    /*
-    // tile size 360/2ⁿ (n = zoom level)
-    val tileSize =  360/pow(2,tile.zoom)
-    // pixel size in degrees is 1/256 tile size
-    val pixelSize =  tileSize/256
-
-    println(s"tile size: $tileSize")
-    println(s"pixel size: $pixelSize")
-    */
-
     val (x0,y0) = tile.offSet
-    // println(s"offset: ($x0,$y0)")
 
     // maps a temperature to an image pixel (256 x 256)
     val gridTemperatures: Seq[((Int, Int), Temperature)] = (
@@ -71,20 +59,45 @@ object Visualization2 extends Visualization2Interface {
         y <- (y0 to y0 + 255).par;
         location: Location = Tile(x,y,tile.zoom+8).toLocation
         // GridLocation -180 -> 179, -90 -> 89
-        iLat = location.lat.toInt
-        iLon = location.lon.toInt
-        d00 = grid(GridLocation(iLat,iLon))
-        d01 = grid(GridLocation(iLat+1,iLon).wrap)
-        d10 = grid(GridLocation(iLat,iLon+1).wrap)
-        d11 = grid(GridLocation(iLat+1,iLon+1).wrap)
-        p = CellPoint(location.lon % 1,location.lat % 1) // use decimal part for interpolation
-        // q = println(iLat,iLon,p)
+        ips = interpolationSquare(location)
+        d00 = grid(ips.upperLeft)
+        d01 = grid(ips.lowerLeft)
+        d10 = grid(ips.upperRight)
+        d11 = grid(ips.lowerRight)
       } yield {
-        (x-x0,y-y0) -> bilinearInterpolation(p,d00,d01,d10,d11)
+        (x-x0,y-y0) -> bilinearInterpolation(ips.point,d00,d01,d10,d11)
       }
     ).seq
 
     coloredTemperatureImage(gridTemperatures,colors,256,127)
   }
 
+  /**
+    * Defines a square with 4 corners and a CellPoint with
+    * coordinates (0 ≤ x ≤ 1 and 0 ≤ y ≤ 1),
+    * relative to the upper left corner of the square.
+    *
+    * @author acdhirr
+    * @param location
+    */
+  case class interpolationSquare(location: Location) {
+
+    private val iLat = location.lat.floor.toInt
+    private val iLon = location.lon.floor.toInt
+    private val dLat = location.lat - iLat
+    private val dLon = location.lon - iLon
+
+    def upperLeft   = GridLocation(iLat,iLon)
+    def lowerLeft   = GridLocation(iLat+1,iLon).wrap
+    def upperRight  = GridLocation(iLat,iLon+1).wrap
+    def lowerRight  = GridLocation(iLat+1,iLon+1).wrap
+
+    // !Remember: CellPoint uses (x,y) so use (longitude, latitude)!
+    def point       = CellPoint(dLon,dLat)
+
+    override def toString: String =
+      s"$upperLeft,$lowerLeft,$upperRight,$lowerRight, $point"
+  }
+
 }
+

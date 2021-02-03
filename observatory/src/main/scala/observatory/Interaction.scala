@@ -31,8 +31,8 @@ object Interaction extends InteractionInterface {
 
     val calculatedTemperatures: Seq[((Int,Int), Temperature)] = (
       for {
-        x <- (y0 to y0 + 255).par;
-        y <- (x0 to x0 + 255).par;
+        x <- (x0 to x0 + 255).par;
+        y <- (y0 to y0 + 255).par;
         // Hint: you will have to compute the corresponding latitude and longitude of each pixel within a tile.
         // A simple way to achieve that is to rely on the fact that each pixel in a tile can be thought of
         // as a sub tile at a higher zoom level (256 = 2⁸).

@@ -20,7 +20,7 @@ object Main extends App {
   )
 
   // Choose which stage(s) you want to run
-  stage5()
+  stage5a()
 
   def stage2() = {
 
@@ -164,6 +164,22 @@ object Main extends App {
 
   }
 
+
+  def stage5a() = {
+
+    val loc1 = Location(2.3,4.5)
+    println(Visualization2.interpolationSquare(loc1))
+
+    val loc2 = Location(-2.3,4.5)
+    println(Visualization2.interpolationSquare(loc2))
+
+    val loc3 = Location(2.3,4.1)
+    println(Visualization2.interpolationSquare(loc3))
+
+    val loc4 = Location(2.3,-4.1)
+    println(Visualization2.interpolationSquare(loc4))
+
+  }
 
 }
 

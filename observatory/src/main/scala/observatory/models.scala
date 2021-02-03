@@ -72,8 +72,8 @@ case class Tile(x: Int, y: Int, zoom: Int) {
 case class GridLocation(lat: Int, lon: Int) {
 
   def wrap = GridLocation(
-      (lat + 90) % 180 - 90, (lon + 180) % 360 - 180
-    )
+    (lat + 90) % 180 - 90, (lon + 180) % 360 - 180
+  )
 
   def asRadians: RadianLocation =
     RadianLocation(lat.toRadians, lon.toRadians)
